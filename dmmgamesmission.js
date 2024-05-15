@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         DMM Games Mission Assist
+// @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
 // @version      beta-0.1.0
 // @description  DMM Games Mission one click complete
