@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.1.0
+// @version      beta-0.1.2
 // @description  DMM Games Mission one click complete
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -28,8 +28,8 @@
     // unsafeWindow.GM_setValue = GM_setValue;
     // unsafeWindow.GM_deleteValue = GM_deleteValue;
     // unsafeWindow.GM_listValues = GM_listValues;
-    // unsafeWindow.GM_xmlhttpRequest = GM_xmlhttpRequest;
-    // unsafeWindow.GM = GM;
+    unsafeWindow.GM_xmlhttpRequest = GM_xmlhttpRequest;
+    unsafeWindow.GM = GM;
     // unsafeWindow.CryptoJS = CryptoJS;
     // unsafeWindow.jsyaml = jsyaml;
 
@@ -400,14 +400,40 @@
         return;
     }
 
+    // update lottery func
+    let lotteryJoin = function(link){
+        let details = {
+            method: "GET",
+            url: link
+        }
+        let response = GM.xmlHttpRequest(details);
+        console.log(response);
+        return;
+    }
+
+    let lotteryStatus = function(node){
+        // is_not-started -> is_in-progress -> is_completed
+        if(node.className.includes('is_completed')){
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+
 
     let mainPC = async function(){
 
         console.log("PC");
-        await waitQuerySelector("body > div.l-content > div > div > main > section > div.p-standardTab.is-receiveTab.fn-standardTab.is-fixed > section.standardTab_section.is-receive > div.standardTab_sectionInner.is-receive > section")
 
+        let leftTab = document.querySelector("h2.standardTab_capt.is-receive.fn-tabReceive.fn-actionLabel[data-actionlabel=mission_left_tab]");
+        // let rightTab = document.querySelector("h2.standardTab_capt.is-lottery.fn-tabLottery.fn-actionLabel[data-actionlabel=mission_right_tab]");
+
+
+        // await waitQuerySelector("body > div.l-content > div > div > main > section > div.p-standardTab.is-receiveTab.fn-standardTab > section.standardTab_section.is-receive > div.standardTab_sectionInner.is-receive > section")
+        
         let selectDailyMissionSection = function(){
-            let possibleDailyMissionNodeList = document.querySelectorAll("body > div.l-content > div > div > main > section > div.p-standardTab.is-receiveTab.fn-standardTab.is-fixed > section.standardTab_section.is-receive > div.standardTab_sectionInner.is-receive > section");
+            let possibleDailyMissionNodeList = document.querySelectorAll("body > div.l-content > div > div > main > section > div.p-standardTab.is-receiveTab.fn-standardTab > section.standardTab_section.is-receive > div.standardTab_sectionInner.is-receive > section");
             for(let i=0;i<possibleDailyMissionNodeList.length;i++){
                 let featureTextNode = possibleDailyMissionNodeList[i].querySelector("h3.p-captStandard");
                 if(featureTextNode){
@@ -422,6 +448,8 @@
         let dailyMission = selectDailyMissionSection();
         let dailyMissionList = dailyMission.querySelectorAll("li.listMission_item.c-missionFrame08");
         // dailyMissionList index: 0.webGame 1.clientGame 2.pachinko 3.library
+        let lotterylist = document.querySelectorAll("section.standardTab_section.is-lottery > div > section.p-sectMission > ul.c-listMission > li.listMission_item.c-missionFrame05");
+        // lotterylist index: 0.monthly 1.weekly
 
         let pcWebGame = function(){
             let pcWebGameList = dailyMissionList[0].querySelectorAll('li.targetGameItem > a');
@@ -453,6 +481,22 @@
             return;
         }
 
+        let lotteryGame = function(){
+            for(let i=0;i<lotterylist.length;i++){
+                if(lotterylist[i].querySelector("div.missionFrame_header > a")){
+                    lotteryJoin(lotterylist[i].querySelector("div.missionFrame_header > a").href);
+                }
+                if(lotteryStatus(lotterylist[i].querySelector("div.missionFrame_status.listMission_status.c-button"))){
+                    let link = lotterylist[i].querySelector("a.listMission_targetLink.fn-actionLabel").href;
+                    let tab = GM_openInTab(link);
+                    setTimeout(function(){
+                        tab.close();
+                    },10000);
+                }
+            }
+            return;
+        }
+
         let receiveStatus = function(){
             let status = 0;
             for(let i=0;i<dailyMissionList.length;i++){
@@ -479,6 +523,7 @@
             if(missionStatus(dailyMissionList[3])<0){
                 pcLibrary();
             }
+            lotteryGame();
             await sleep(12000);
             location.reload();
             return;
@@ -504,9 +549,12 @@
             await clientGame(getCurrentClientGameProductId(currentPageType),currentPageType);
         }
 
+
+
         if(receiveStatus()){
             let receiveAllBtn = document.querySelector("button.receiveAll_btn.c-btnAction.fn-getMedalMulti");
             receiveAllBtn.click();
+            window.scrollTo(0,leftTab.getBoundingClientRect().bottom);
         }
 
     }
@@ -522,14 +570,20 @@
         unsafeWindow.mobileDailyMissionList = mobileDailyMissionList;
         // index: 0.webGame 1.pachinko 2.library
 
+        let isNotDownloadAppLink = function(link){
+            return !link.match(/\/app\/-\/appstore\/download/g);
+        }
+
         let mobileWebGame = function(){
             let mobileWebGameList = mobileDailyMissionList[0].querySelectorAll("li.target-item > a");
             for(let i=0;i<mobileWebGameList.length;i++){
                 let link = mobileWebGameList[i].href;
-                let tab = GM_openInTab(link);
-                setTimeout(function(){
-                    tab.close();
-                },10000);
+                if(isNotDownloadAppLink(link)){
+                    let tab = GM_openInTab(link);
+                    setTimeout(function(){
+                        tab.close();
+                    },10000);
+                }
             }
             return;
         }
