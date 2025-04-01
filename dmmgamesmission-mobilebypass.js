@@ -1,11 +1,15 @@
 // ==UserScript==
 // @name         DMM Games Mission - Mobile UA Bypass
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.0.1
+// @version      beta-0.0.2
 // @description  Bypass some dmm mobile game check userAgent in browser
 // @author       Pandamon
 // @match        https://play.games.dmm.com/game/yuusyananteokotowari_150692
 // @match        https://play.games.dmm.com/game/crimson_youmataisen_sp
+// @match        https://play.games.dmm.com/game/leagueofangels
+// @match        https://play.games.dmm.com/game/otogi_f_sp
+// @match        https://play.games.dmm.co.jp/game/inyouchu-kin_sp
+// @match        https://play.games.dmm.co.jp/game/oenshinshix_sp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=tampermonkey.net
 // @run-at       document-start
 // @grant        unsafeWindow
