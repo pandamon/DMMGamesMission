@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.3.1
+// @version      beta-0.3.2
 // @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -196,7 +196,7 @@
 
     let getHardwareInfo = function(){
         let hardwareInfo = GM_getValue("HardwareInfo",null);
-        if(!hardwareInfo){
+        if(!hardwareInfo || !('user_os' in hardwareInfo)){
             hardwareInfo = genRandomHardwareInfo();
             saveHardwareInfo(hardwareInfo);
         }
