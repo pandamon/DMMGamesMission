@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.2.0
-// @description  DMM Games Mission one click complete
+// @version      beta-0.3.0
+// @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
 // @match        https://mission.games.dmm.co.jp
@@ -18,6 +18,8 @@
 // @grant        GM_openInTab
 // @connect      dmm.com
 // @run-at       document-idle
+// @downloadURL  https://raw.githubusercontent.com/pandamon/DMMGamesMission/refs/heads/main/dmmgamesmission.js
+// @updateURL    https://raw.githubusercontent.com/pandamon/DMMGamesMission/refs/heads/main/dmmgamesmission.js
 
 // ==/UserScript==
 
@@ -29,7 +31,7 @@
     // unsafeWindow.GM_setValue = GM_setValue;
     // unsafeWindow.GM_deleteValue = GM_deleteValue;
     // unsafeWindow.GM_listValues = GM_listValues;
-    unsafeWindow.GM_xmlhttpRequest = GM_xmlhttpRequest;
+    // unsafeWindow.GM_xmlhttpRequest = GM_xmlhttpRequest;
     // unsafeWindow.GM = GM;
     // unsafeWindow.CryptoJS = CryptoJS;
     // unsafeWindow.jsyaml = jsyaml;
@@ -64,18 +66,37 @@
         return document.querySelector(queryString);
     }
 
+    let zeroHourNextDayTokyoTime = function(){
+        // return next day 0:00:00 GMT+9
+        // Get the time difference between the local time zone and UTC (minutes)
+        let localOffset = new Date().getTimezoneOffset(); // Beijing time is -480
+        // Time difference between Tokyo time zone and UTC (minutes)
+        let tokyoOffset = -9 * 60; // UTC+9
+        // Calculate the time difference between local time and Tokyo time (hours)
+        let diffHours = (tokyoOffset - localOffset) / 60; // Beijing time is -1
+        let d = new Date(); // local time
+        d.setHours(d.getHours() - diffHours); // to GMT+9
+        d.setDate(d.getDate() + 1); // Next day
+        d.setHours(0);
+        d.setMinutes(0);
+        d.setSeconds(0);
+        d.setMilliseconds(0);
+        d.setHours(d.getHours() + diffHours); // to local time
+        return d;
+    }
+
 
     // page platform and type check
 
     let pagePlatform = function(){
-        let pcCharacteristic = document.querySelector("#olympus-ntgnav");
-        let mobileCharacteristic = document.querySelector("#olympus-menu-bar");
-        if(pcCharacteristic && !mobileCharacteristic){
+        let pcHallmark = document.querySelector("#olympus-ntgnav");
+        let mobileHallmark = document.querySelector("#olympus-menu-bar");
+        if(pcHallmark && !mobileHallmark){
             return "PC";
-        } else if(!pcCharacteristic && mobileCharacteristic){
+        } else if(!pcHallmark && mobileHallmark){
             return "mobile";
         } else {
-            throw Error("something wrong");
+            throw Error("pagePlatform error");
         }
     }
 
@@ -137,8 +158,9 @@
     let clientHeader = async function(){
         let clientVersion = await getClientVersion();
         let header = {
+            "Cookie": "age_check_done=1",
             "Content-Type": "application/json",
-            "User-Agent":`DMMGamePlayer5-Win/${clientVersion.version} Electron/34.1.1`,
+            "User-Agent":`DMMGamePlayer5-Win/${clientVersion.version} Electron/34.3.0`,
             "Client-App":"DMMGamePlayer5",
             "Client-Version":clientVersion.version
         }
@@ -168,6 +190,7 @@
         hardwareInfo.mac_address = genRandomMAC();
         hardwareInfo.hdd_serial = sha256Hash("hdd_serial"+timestamp);
         hardwareInfo.motherboard = sha256Hash("motherboard"+timestamp);
+        hardwareInfo.user_os = "win";
         return hardwareInfo;
     }
 
@@ -184,6 +207,14 @@
         GM_setValue("HardwareInfo",hardwareInfo);
         return;
     }
+
+    let resetHardwareInfo = function(){
+        let hardwareInfo = genRandomHardwareInfo();
+        saveHardwareInfo(hardwareInfo);
+        console.log(hardwareInfo);
+        return;
+    }
+    unsafeWindow.resetHardwareInfo = resetHardwareInfo; // for debug manually
 
 
     // get actauth string
@@ -209,7 +240,7 @@
     }
 
     let realClientLoginURL = function(clientLoginURL){
-        // this function is used to get the real client login url
+        // get the real client login url
         // example: 
         // https://accounts.dmm.com/service/oauth/select/=/path=https%3A%2F%2Fwww.dmm.com%2Fmy%2F-%2Fauthorize%3Fclient_id%3DXXX%26response_type%3Dcode%26from_domain%3Daccounts?prompt=choose
         let urlstring = clientLoginURL.match(/(?<=https:\/\/accounts\.dmm\.com\/service\/oauth\/select\/=\/path=).*/)[0];
@@ -217,7 +248,7 @@
     }
 
     let getLoginCode = async function(realclientLoginURL){
-        // this function is used to get the login code from the real client login url
+        // get the login code from the real client login url
         // example: https://webdgp-gameplayer.games.dmm.com/login/success?code=XXX
         // the code is the value of the "code" parameter in the url
         let details = {
@@ -232,7 +263,7 @@
     }
 
     let getClientAccessToken = async function(loginCode){
-        // this function is used to get the access token from the login code
+        // get the access token from the login code
         let header = await clientHeader();
         let data = {"code": loginCode};
         let details = {
@@ -254,7 +285,7 @@
     }
 
     let checkClientAccessToken = async function(accessToken){
-        // this function is used to check the access token
+        // check the access token
         let header = await clientHeader();
         let data = {"access_token": accessToken};
         let details = {
@@ -265,7 +296,8 @@
         }
         let response = await GM.xmlHttpRequest(details);
         let result = JSON.parse(response.responseText);
-        // console.log(result);
+        console.log('/v5/auth/accesstoken/check');
+        console.log(result);
         if(result.result_code == 100){
             if(result.data && result.data.result){
                 return true;
@@ -291,22 +323,49 @@
         return;
     }
 
+    let getActauthExpireTime = function(){
+        if(GM_getValue("ActauthExpireTime",null) == null){
+            resetActauthExpireTime();
+        }
+        return GM_getValue("ActauthExpireTime",null);
+    }
+
+    let resetActauthExpireTime = function(){
+        // reset expire time to next day 0:00:00 GMT+9
+        let expireTime = zeroHourNextDayTokyoTime().getTime();
+        GM_setValue("ActauthExpireTime", expireTime);
+        console.log("Actauth expire time is reset to next day 0:00:00 GMT+9");
+        return;
+    }
+
     let getActauth = async function(){
         let actauth = GM_getValue("Actauth",null);
-        if(actauth && await checkClientAccessToken(actauth)){
-            console.log("Actauth is valid: "+actauth);
-            // actauth is valid
-        } else {
+        if(actauth == null){
             actauth = await updateClientAccessToken();
             saveActauth(actauth);
+            resetActauthExpireTime();
             console.log("Actauth updated: "+actauth);
-            // actauth is not valid
+            // actauth not exist
+        } else if(Date.now() > getActauthExpireTime()){
+            if(await checkClientAccessToken(actauth)){
+                console.log("Actauth is valid: "+actauth);
+                resetActauthExpireTime();
+                // actauth is valid
+            } else {
+                actauth = await updateClientAccessToken();
+                saveActauth(actauth);
+                resetActauthExpireTime();
+                console.log("Actauth updated: "+actauth);
+                // actauth is not valid
+            }
+        } else {
+            // console.log("Actauth have been checked validity today: "+actauth);
         }
         return actauth;
     }
 
 
-    // client game launch
+    // dmm game player client game launch
 
     let postLaunchClientGame = async function(data){
         let header = await clientHeader();
@@ -316,59 +375,230 @@
             method: "POST",
             url: 'https://apidgp-gameplayer.games.dmm.com/v5/r2/launch/cl',
             headers: header,
-            // headers:
-            // {
-            //     "Actauth":"xxx",
-            //     "Content-Type": "application/json",
-            //     "User-Agent":`DMMGamePlayer5-Win/${clientVersion.version} Electron/34.1.1`,
-            //     "Client-App":"DMMGamePlayer5",
-            //     "Client-Version":clientVersion.version
-            // },
             data: JSON.stringify(data)
         }
         let launchResponse = await GM.xmlHttpRequest(details);
         let launchResult = JSON.parse(launchResponse.responseText);
+        console.log('/v5/r2/launch/cl');
         console.log(launchResult);
         return launchResult;
     }
 
-    let getCurrentClientGameProductId = function(type){
-        if(type == 'dmm'){
-            return GM_getValue('dmm_product_id',null);
-        } else if(type == 'fanza'){
-            return GM_getValue('fanza_product_id',null);
+    let dmmgameplayerLinkParser = function(dmmgameplayerLink){
+        if(!dmmgameplayerLink.startsWith('dmmgameplayer://')){
+            throw Error("dmmplayerLinkParser error: dmmplayerLink must be start with dmmgameplayer://");
+        }
+        let dmmgameplayerURL = new URL(dmmgameplayerLink);
+        if(!(dmmgameplayerURL.protocol == 'dmmgameplayer:')){
+            throw Error("dmmplayerLinkParser error: dmmplayerLink must be dmmgameplayer protocol");
+        }
+        if(dmmgameplayerURL.pathname.includes('general')){
+            return {
+                product_id:dmmgameplayerURL.host,
+                game_type:'GCL',
+                game_os:'win'
+            };
+        } else if(dmmgameplayerURL.pathname.includes('adult')){
+            return {
+                product_id:dmmgameplayerURL.host,
+                game_type:'ACL',
+                game_os:'win'
+            };
         } else {
-            throw Error('game type error');
+            throw Error("dmmplayerLinkParser error: game_type is not general(GCL) or adult(ACL)");
         }
     }
 
-    let saveCurrentClientGameProductId = function(type,product_id){
-        if(type == 'dmm'){
-            GM_setValue('dmm_product_id',product_id);
-            console.log('dmm_product_id now is '+product_id);
-        } else if(type == 'fanza'){
-            GM_setValue('fanza_product_id',product_id);
-            console.log('fanza_product_id now is '+product_id);
+    let getDmmgameplayerLink = function(pageType){
+        if(pageType == 'dmm'){
+            return GM_getValue('dmm_dmmgameplayerLink',null);
+        } else if(pageType == 'fanza'){
+            return GM_getValue('fanza_dmmgameplayerLink',null);
         } else {
-            throw Error('game type error');
+            throw Error('pageType error');
+        }
+    }
+
+    let saveDmmgameplayerLink = function(pageType,dmmgameplayerLink){
+        if(pageType == 'dmm'){
+            GM_setValue('dmm_dmmgameplayerLink',dmmgameplayerLink);
+            console.log('dmm_dmmgameplayerLink now is '+dmmgameplayerLink);
+        } else if(pageType == 'fanza'){
+            GM_setValue('fanza_dmmgameplayerLink',dmmgameplayerLink);
+            console.log('fanza_dmmgameplayerLink now is '+dmmgameplayerLink);
+        } else {
+            throw Error('pageType error');
         }
         return;
     }
 
-    let clientGame = async function(product_id,type){
-        let data = getHardwareInfo();
-        data.game_os = "win";
-        data.launch_type = "LIB";
-        data.user_os = "win";
-        data.product_id = product_id;
-        if(type == 'dmm'){
-            data.game_type = 'GCL';
-        } else if(type == 'fanza'){
-            data.game_type = 'ACL';
-        } else {
-            return 'type error';
+    let clientGame = async function(pageType){
+        let clientGameData = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
+        clientGameData.launch_type = "LIB";
+        await postLaunchClientGame(clientGameData);
+        return;
+    }
+
+
+    // add dmm game player client game into your gamelist
+    
+    let detailButtoninfo = async function(pageType){
+        let header = await clientHeader();
+        header.Actauth = await getActauth();
+        let data = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/detail/buttoninfo',
+            headers: header,
+            data: JSON.stringify(data)
         }
-        await postLaunchClientGame(data);
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log('/v5/detail/buttoninfo');
+        console.log(result);
+        if(result.result_code !== 100){
+            throw Error("detail/buttoninfo error");
+        }
+        return result;
+    }
+    
+    let mygameRestore = async function(pageType){
+        let header = await clientHeader();
+        header.Actauth = await getActauth();
+        let data = {my_games:[dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))]};
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/mygame/restore',
+            headers: header,
+            data: JSON.stringify(data)
+        }
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log('/v5/mygame/restore');
+        console.log(result);
+        if(result.result_code !== 100){
+            throw Error("mygame/restore error");
+        }
+        return result;
+    }
+
+    let detailMygameAdd = async function(pageType){
+        let header = await clientHeader();
+        header.Actauth = await getActauth();
+        let data = dmmgameplayerLinkParser(getDmmgameplayerLink(pageType));
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/detail/mygame/add',
+            headers: header,
+            data: JSON.stringify(data)
+        }
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log('/v5/detail/mygame/add');
+        console.log(result);
+        if(result.result_code !== 100){
+            throw Error("detail/mygame/add error");
+        }
+        return result;
+    }
+
+    let r2InstallCl = async function(pageType){
+        let header = await clientHeader();
+        header.Actauth = await getActauth();
+        let data = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/r2/install/cl',
+            headers: header,
+            data: JSON.stringify(data)
+        }
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log('/v5/r2/install/cl');
+        console.log(result);
+        if(result.result_code == 308){
+            console.log("r2/install/cl result_code 308, agreement required");
+        } else if (result.result_code == 100){
+            console.log("r2/install/cl result_code 100");
+        } else {
+            throw Error("r2/install/cl unknown error");
+        }
+        return result;
+    }
+
+    let agreement = async function(pageType){
+        let header = await clientHeader();
+        header.Actauth = await getActauth();
+        let data = {product_id:dmmgameplayerLinkParser(getDmmgameplayerLink(pageType)).product_id};
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/agreement',
+            headers: header,
+            data: JSON.stringify(data)
+        }
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log('/v5/agreement');
+        console.log(result);
+        if(result.result_code !== 100){
+            throw Error("agreement error");
+        }
+        return result;
+    }
+
+    let agreementConfirmClient = async function(pageType){
+        let header = await clientHeader();
+        header.Actauth = await getActauth();
+        let data = {
+            product_id:dmmgameplayerLinkParser(getDmmgameplayerLink(pageType)).product_id,
+            is_notification:false
+        };
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/agreement/confirm/client',
+            headers: header,
+            data: JSON.stringify(data)
+        }
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log('/v5/agreement/confirm/client');
+        console.log(result);
+        if(result.result_code !== 100){
+            throw Error("agreement/confirm/client error");
+        }
+        return result;
+    }
+
+    let addClientGame = async function(pageType){
+        let detailButtoninfoResult = await detailButtoninfo(pageType);
+        if(detailButtoninfoResult.data[0].main_button_info.actions[0] == 'addMyGame' || !detailButtoninfoResult.data[0].is_in_mygame){
+            await mygameRestore(pageType);
+            await detailMygameAdd(pageType);
+            console.log('this game is added into game list now');
+        } else {
+            console.log('this game have been in game list');
+        }
+        let r2InstallClResult = await r2InstallCl(pageType);
+        if(r2InstallClResult.result_code == 308){
+            // agreement required
+            await agreement(pageType);
+            let agreementConfirmClientResult = await agreementConfirmClient(pageType);
+            if(agreementConfirmClientResult.result_code == 100){
+                console.log('confirm agreement success');
+            }            
+            let r2InstallClResult2 = await r2InstallCl(pageType);
+            if(r2InstallClResult2.result_code == 100){
+                console.log('r2/install/cl success');
+            } else {
+                throw Error("r2/install/cl 2 unknown error");
+            }
+        } else if (r2InstallClResult.result_code == 100){
+            // no need confirm agreement
+            console.log('r2/install/cl success, no need confirm agreement');
+        } else {
+            throw Error("r2/install/cl unknown error");
+        }
+        console.log('add client game finish');
         return;
     }
 
@@ -429,20 +659,20 @@
         return createNode;
     }
 
-    let createInputProductId = function(beforeNode,id){
-        let inputProductIdAttribute = {
-            id:id, //"ClientGameProductId"
+    let createInputLink = function(beforeNode,id){
+        let inputLinkAttribute = {
+            id:id, //"dmmgameplayerLink"
             background:"#FFFFFF",
             fontSize:"16px",
             border:"2px solid black"
         };
-        return insertNodeBefore(beforeNode,"input",inputProductIdAttribute);
+        return insertNodeBefore(beforeNode,"input",inputLinkAttribute);
     }
 
-    let createSaveProductIdBtn = function(beforeNode,id){
+    let createSaveLinkBtn = function(beforeNode,id){
         let saveProductIdBtnAttribute = {
-            id:id, //"SaveProductIdBtn"
-            innerHTML:"&nbsp;Save Product ID&nbsp;",
+            id:id, //"SaveLinkBtn"
+            innerHTML:"&nbsp;Save Link&nbsp;",
             background:"#F4A460",
             color:"#000",
             fontSize:"16px",
@@ -463,6 +693,18 @@
         return insertNodeBefore(beforeNode,"button",attribute);
     }
 
+    let createAddGameBtn = function(beforeNode,id){
+        let attribute = {
+            id:id, //"AddGameBtn"
+            innerHTML:"&nbsp;Add Game&nbsp;",
+            background:"#EE82EE",
+            color:"#000",
+            fontSize:"16px",
+            border:"2px solid black"
+        };
+        return insertNodeBefore(beforeNode,"button",attribute);
+    }
+
     let createOneClickReceiveBtn = function(beforeNode,id){
         let attribute = {
             id:id,
@@ -476,7 +718,7 @@
     }
 
 
-    // lottery mission
+    // PC lottery mission
 
     let lotteryJoin = function(link){
         let details = {
@@ -503,12 +745,6 @@
     let mainPC = async function(){
 
         console.log("PC");
-
-        let leftTab = document.querySelector("h2.standardTab_capt.is-receive.fn-tabReceive.fn-actionLabel[data-actionlabel=mission_left_tab]");
-        // let rightTab = document.querySelector("h2.standardTab_capt.is-lottery.fn-tabLottery.fn-actionLabel[data-actionlabel=mission_right_tab]");
-
-
-        // await waitQuerySelector("body > div.l-content > div > div > main > section > div.p-standardTab.is-receiveTab.fn-standardTab > section.standardTab_section.is-receive > div.standardTab_sectionInner.is-receive > section")
         
         let selectDailyMissionSection = function(){
             let possibleDailyMissionNodeList = document.querySelectorAll("body > div.l-content > div > div > main > section > div.p-standardTab.is-receiveTab.fn-standardTab > section.standardTab_section.is-receive > div.standardTab_sectionInner.is-receive > section");
@@ -614,27 +850,34 @@
             pcOneClickReceive();
         }
         insertNodeBefore(missionContentPlace,"br",{});
-        let inputProductId = createInputProductId(missionContentPlace,"ClientGameProductId");
-        if(getCurrentClientGameProductId(currentPageType)){
-            inputProductId.value = getCurrentClientGameProductId(currentPageType);
+        insertNodeBefore(missionContentPlace,"span",{
+            fontSize:"16px",
+            innerHTML:"&nbsp;Input dmmgameplayer link:&nbsp;"
+        });
+        insertNodeBefore(missionContentPlace,"br",{});
+        let inputLink = createInputLink(missionContentPlace,"dmmgameplayerLink");
+        inputLink.style.width = "600px";
+        if(getDmmgameplayerLink(currentPageType)){
+            inputLink.value = getDmmgameplayerLink(currentPageType);
         }
-        let saveProductIdBtn = createSaveProductIdBtn(missionContentPlace,"SaveProductIdBtn");
-        saveProductIdBtn.onclick = function(){
-            saveCurrentClientGameProductId(currentPageType,inputProductId.value);
+        insertNodeBefore(missionContentPlace,"br",{});
+        let saveLinkBtn = createSaveLinkBtn(missionContentPlace,"SaveLinkBtn");
+        saveLinkBtn.onclick = function(){
+            saveDmmgameplayerLink(currentPageType,inputLink.value);
         }
         let clientGameMissionBtn = createClientGameMissionBtn(missionContentPlace,"ClientGameMissionBtn");
         clientGameMissionBtn.onclick = async function(){
-            await clientGame(getCurrentClientGameProductId(currentPageType),currentPageType);
+            await clientGame(currentPageType);
         }
-
-
+        let addGameBtn = createAddGameBtn(missionContentPlace,"AddGameBtn");
+        addGameBtn.onclick = async function(){
+            await addClientGame(currentPageType);
+        }
 
         if(receiveStatus()){
             let receiveAllBtn = document.querySelector("button.receiveAll_btn.c-btnAction.fn-getMedalMulti");
             receiveAllBtn.click();
-            window.scrollTo(0,leftTab.getBoundingClientRect().bottom);
         }
-
     }
 
 
@@ -722,7 +965,6 @@
             let receiveAllBtn = document.querySelector("button.receive-all-button.fn-get-medal-multi");
             receiveAllBtn.click();
         }
-
     }
 
     if(pagePlatform() == "PC"){
