@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.3.0
+// @version      beta-0.3.1
 // @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -670,7 +670,7 @@
     }
 
     let createSaveLinkBtn = function(beforeNode,id){
-        let saveProductIdBtnAttribute = {
+        let saveLinkBtnAttribute = {
             id:id, //"SaveLinkBtn"
             innerHTML:"&nbsp;Save Link&nbsp;",
             background:"#F4A460",
@@ -678,7 +678,7 @@
             fontSize:"16px",
             border:"2px solid black"
         };
-        return insertNodeBefore(beforeNode,"button",saveProductIdBtnAttribute);
+        return insertNodeBefore(beforeNode,"button",saveLinkBtnAttribute);
     }
 
     let createClientGameMissionBtn = function(beforeNode,id){
@@ -829,7 +829,7 @@
                 pcWebGame();
             }
             if(missionStatus(dailyMissionList[1])<0){
-                clientGame(getCurrentClientGameProductId(currentPageType),currentPageType);
+                clientGame(currentPageType);
             }
             if(missionStatus(dailyMissionList[2])<0){
                 pcPachinko();
