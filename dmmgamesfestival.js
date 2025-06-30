@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Festival
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.0.1
+// @version      beta-0.0.2
 // @description  DMM Games Festival mission game one click complete
 // @author       Pandamon
 // @match        https://games.dmm.com/cp/festival/*
@@ -11,6 +11,8 @@
 // @grant        GM_openInTab
 // @connect      dmm.com
 // @run-at       document-idle
+// @downloadURL  https://raw.githubusercontent.com/pandamon/DMMGamesMission/refs/heads/main/dmmgamesfestival.js
+// @updateURL    https://raw.githubusercontent.com/pandamon/DMMGamesMission/refs/heads/main/dmmgamesfestival.js
 
 // ==/UserScript==
 
