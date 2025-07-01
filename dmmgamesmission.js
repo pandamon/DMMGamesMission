@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.3.2
+// @version      beta-0.3.3
 // @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -314,9 +314,12 @@
         let clientLoginURL = realClientLoginURL(await getClientLoginURL());
         let loginCode = await getLoginCode(clientLoginURL);
         let accessToken = await getClientAccessToken(loginCode);
+        saveActauth(accessToken);
+        console.log("Actauth updated: "+accessToken);
         // console.log("New access token: "+accessToken);
         return accessToken;
     }
+    unsafeWindow.updateClientAccessToken = updateClientAccessToken;
 
     let saveActauth = function(actauth){
         GM_setValue("Actauth",actauth);
@@ -342,9 +345,9 @@
         let actauth = GM_getValue("Actauth",null);
         if(actauth == null){
             actauth = await updateClientAccessToken();
-            saveActauth(actauth);
+            // saveActauth(actauth);
             resetActauthExpireTime();
-            console.log("Actauth updated: "+actauth);
+            // console.log("Actauth updated: "+actauth);
             // actauth not exist
         } else if(Date.now() > getActauthExpireTime()){
             if(await checkClientAccessToken(actauth)){
@@ -353,9 +356,9 @@
                 // actauth is valid
             } else {
                 actauth = await updateClientAccessToken();
-                saveActauth(actauth);
+                // saveActauth(actauth);
                 resetActauthExpireTime();
-                console.log("Actauth updated: "+actauth);
+                // console.log("Actauth updated: "+actauth);
                 // actauth is not valid
             }
         } else {
