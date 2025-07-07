@@ -419,7 +419,7 @@
 
     let clientGame = async function(pageType){
         let actauth = await getActauth();
-        if(!checkClientAccessToken(actauth)){
+        if(!await checkClientAccessToken(actauth)){
             actauth = await updateClientAccessToken();
         }
         let clientGameData = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
@@ -560,7 +560,7 @@
 
     let addClientGame = async function(pageType){
         let actauth = await getActauth();
-        if(!checkClientAccessToken(actauth)){
+        if(!await checkClientAccessToken(actauth)){
             actauth = await updateClientAccessToken();
         }
         let detailButtoninfoResult = await detailButtoninfo(pageType);
