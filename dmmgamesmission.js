@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.3.3
+// @version      beta-0.3.4
 // @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -316,7 +316,6 @@
         let accessToken = await getClientAccessToken(loginCode);
         saveActauth(accessToken);
         console.log("Actauth updated: "+accessToken);
-        // console.log("New access token: "+accessToken);
         return accessToken;
     }
     unsafeWindow.updateClientAccessToken = updateClientAccessToken;
@@ -326,46 +325,29 @@
         return;
     }
 
-    let getActauthExpireTime = function(){
-        if(GM_getValue("ActauthExpireTime",null) == null){
-            resetActauthExpireTime();
-        }
-        return GM_getValue("ActauthExpireTime",null);
-    }
-
-    let resetActauthExpireTime = function(){
-        // reset expire time to next day 0:00:00 GMT+9
-        let expireTime = zeroHourNextDayTokyoTime().getTime();
-        GM_setValue("ActauthExpireTime", expireTime);
-        console.log("Actauth expire time is reset to next day 0:00:00 GMT+9");
-        return;
-    }
-
     let getActauth = async function(){
         let actauth = GM_getValue("Actauth",null);
         if(actauth == null){
             actauth = await updateClientAccessToken();
-            // saveActauth(actauth);
-            resetActauthExpireTime();
-            // console.log("Actauth updated: "+actauth);
             // actauth not exist
-        } else if(Date.now() > getActauthExpireTime()){
-            if(await checkClientAccessToken(actauth)){
-                console.log("Actauth is valid: "+actauth);
-                resetActauthExpireTime();
-                // actauth is valid
-            } else {
-                actauth = await updateClientAccessToken();
-                // saveActauth(actauth);
-                resetActauthExpireTime();
-                // console.log("Actauth updated: "+actauth);
-                // actauth is not valid
-            }
-        } else {
-            // console.log("Actauth have been checked validity today: "+actauth);
         }
         return actauth;
     }
+
+    // let getActauthExpireTime = function(){
+    //     if(GM_getValue("ActauthExpireTime",null) == null){
+    //         resetActauthExpireTime();
+    //     }
+    //     return GM_getValue("ActauthExpireTime",null);
+    // }
+
+    // let resetActauthExpireTime = function(){
+    //     // reset expire time to next day 0:00:00 GMT+9
+    //     let expireTime = zeroHourNextDayTokyoTime().getTime();
+    //     GM_setValue("ActauthExpireTime", expireTime);
+    //     console.log("Actauth expire time is reset to next day 0:00:00 GMT+9");
+    //     return;
+    // }
 
 
     // dmm game player client game launch
@@ -436,6 +418,10 @@
     }
 
     let clientGame = async function(pageType){
+        let actauth = await getActauth();
+        if(!checkClientAccessToken(actauth)){
+            actauth = await updateClientAccessToken();
+        }
         let clientGameData = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
         clientGameData.launch_type = "LIB";
         await postLaunchClientGame(clientGameData);
@@ -573,6 +559,10 @@
     }
 
     let addClientGame = async function(pageType){
+        let actauth = await getActauth();
+        if(!checkClientAccessToken(actauth)){
+            actauth = await updateClientAccessToken();
+        }
         let detailButtoninfoResult = await detailButtoninfo(pageType);
         if(detailButtoninfoResult.data[0].main_button_info.actions[0] == 'addMyGame' || !detailButtoninfoResult.data[0].is_in_mygame){
             await mygameRestore(pageType);
