@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.3.4
+// @version      beta-0.3.5
 // @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -757,6 +757,7 @@
         // dailyMissionList index: 0.webGame 1.clientGame 2.pachinko 3.library
         let lotterylist = document.querySelectorAll("section.standardTab_section.is-lottery > div > section.p-sectMission > ul.c-listMission > li.listMission_item.c-missionFrame05");
         // lotterylist index: 0.monthly 1.weekly
+        let limitedTimeMissionNode = document.querySelector("li.listMission_item.c-missionFrame09");
 
         let pcWebGame = function(){
             let pcWebGameList = dailyMissionList[0].querySelectorAll('li.targetGameItem > a');
@@ -804,6 +805,18 @@
             return;
         }
 
+        let limitedTimeMission = function(){
+            let limitedTimeMissionGameList = limitedTimeMissionNode.querySelectorAll('li.targetGameItem > a');
+            for(let i=0;i<limitedTimeMissionGameList.length;i++){
+                let link = limitedTimeMissionGameList[i].href;
+                let tab = GM_openInTab(link);
+                setTimeout(function(){
+                    tab.close();
+                },10000);
+            }
+            return;
+        }
+
         let receiveStatus = function(){
             let status = 0;
             for(let i=0;i<dailyMissionList.length;i++){
@@ -831,6 +844,11 @@
                 pcLibrary();
             }
             lotteryGame();
+            if(limitedTimeMissionNode){
+                if(missionStatus(limitedTimeMissionNode)<0){
+                    limitedTimeMission();
+                }
+            }
             await sleep(12000);
             location.reload();
             return;
