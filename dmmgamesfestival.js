@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Festival
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.0.2
+// @version      beta-0.0.3
 // @description  DMM Games Festival mission game one click complete
 // @author       Pandamon
 // @match        https://games.dmm.com/cp/festival/*
@@ -130,10 +130,11 @@
         console.log("mobile");
     }
     
-    if(pagePlatform() == "PC"){
-        mainPC();
-    } else if(pagePlatform() == "mobile"){
-        mainMobile();
-    }
+    // if(pagePlatform() == "PC"){
+    //     mainPC();
+    // } else if(pagePlatform() == "mobile"){
+    //     mainMobile();
+    // }
+    mainPC();
 
 })();
