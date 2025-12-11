@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         DMM Games Festival
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.0.3
+// @version      beta-0.0.4
 // @description  DMM Games Festival mission game one click complete
 // @author       Pandamon
-// @match        https://games.dmm.com/cp/festival/*
-// @match        https://games.dmm.co.jp/cp/festival/*
+// @match        https://games.dmm.com/campaign/festival-*
+// @match        https://games.dmm.co.jp/campaign/festival-*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=tampermonkey.net
 // @grant        unsafeWindow
 // @grant        GM_openInTab
@@ -97,7 +97,7 @@
         }
 
         let openMissionGame = function(){
-            let missionGameList = document.querySelectorAll("a.mission-game-button:not(.is-active)");
+            let missionGameList = document.querySelectorAll("a[class*=pc_gamePlayButton][data-is-cleared=false][data-gtm-action-detail*=play_pickup-games]");
             if(missionGameList.length>0){
                 for(let i=0;i<missionGameList.length;i++){
                     let link = missionGameList[i].href;
@@ -117,7 +117,7 @@
             return;
         }
 
-        let gameMissionNode = document.querySelector("#lp-daily-mission > div.todays-mission > div.game-mission");
+        let gameMissionNode = document.querySelector("#lp-daily-mission > div[class*=dailyMission_missionGameListContents] > h3[class*=dailyMission_missionGameListTitle]");
         let oneClickReceiveBtn = createOneClickReceiveBtn(gameMissionNode,"OneClickReceiveBtn");
         oneClickReceiveBtn.onclick = function(){
             oneClickReceive();
