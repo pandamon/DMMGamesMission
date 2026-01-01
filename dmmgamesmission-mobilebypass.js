@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission - Mobile UA Bypass
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.1.4
+// @version      beta-0.1.5
 // @description  Bypass some dmm mobile game check userAgent in PC browser
 // @author       Pandamon
 // @match        https://play.games.dmm.com/game/*
@@ -35,6 +35,7 @@
         "https://play.games.dmm.co.jp/game/crimson_youmataisen_x_sp",       // クリムゾン妖魔大戦X for SPブラウザ
         "https://play.games.dmm.co.jp/game/devilcarnival",                  // 淫魔降臨デビル☆カーニバル
         "https://play.games.dmm.co.jp/game/perigeenewmoon_sp_987324",       // 悪の女幹部 ペリジーニュームーン【SPブラウザ支部】
+        "https://play.games.dmm.co.jp/game/dokyusei_sp",                    // 同級生〜Another World〜 SPブラウザ
     ];
 
     let bypassMobileUACheck = function(){
