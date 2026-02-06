@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.4.0
+// @version      beta-0.4.1
 // @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -287,6 +287,7 @@
     }
 
     let checkClientAccessToken = async function(accessToken){
+        console.log('/v5/auth/accesstoken/check');
         // check the access token
         let header = await clientHeader();
         let data = {"access_token": accessToken};
@@ -296,9 +297,9 @@
             headers: header,
             data: JSON.stringify(data)
         }
+        console.log(data);
         let response = await GM.xmlHttpRequest(details);
         let result = JSON.parse(response.responseText);
-        console.log('/v5/auth/accesstoken/check');
         console.log(result);
         if(result.result_code == 100){
             if(result.data && result.data.result){
@@ -336,115 +337,30 @@
         return actauth;
     }
 
-    // let getActauthExpireTime = function(){
-    //     if(GM_getValue("ActauthExpireTime",null) == null){
-    //         resetActauthExpireTime();
-    //     }
-    //     return GM_getValue("ActauthExpireTime",null);
-    // }
-
-    // let resetActauthExpireTime = function(){
-    //     // reset expire time to next day 0:00:00 GMT+9
-    //     let expireTime = zeroHourNextDayTokyoTime().getTime();
-    //     GM_setValue("ActauthExpireTime", expireTime);
-    //     console.log("Actauth expire time is reset to next day 0:00:00 GMT+9");
-    //     return;
-    // }
 
 
-    // dmm game player client game launch
 
-    let postLaunchClientGame = async function(data){
-        let header = await clientHeader();
-        header.Actauth = await getActauth();
-        // console.log(header);
-        let details = {
-            method: "POST",
-            url: 'https://apidgp-gameplayer.games.dmm.com/v5/r2/launch/cl',
-            headers: header,
-            data: JSON.stringify(data)
-        }
-        let launchResponse = await GM.xmlHttpRequest(details);
-        let launchResult = JSON.parse(launchResponse.responseText);
-        console.log('/v5/r2/launch/cl');
-        console.log(launchResult);
-        return launchResult;
-    }
-
-    let dmmgameplayerLinkParser = function(dmmgameplayerLink){
-        if(!dmmgameplayerLink.startsWith('dmmgameplayer://')){
-            throw Error("dmmplayerLinkParser error: dmmplayerLink must be start with dmmgameplayer://");
-        }
-        let dmmgameplayerURL = new URL(dmmgameplayerLink);
-        if(!(dmmgameplayerURL.protocol == 'dmmgameplayer:')){
-            throw Error("dmmplayerLinkParser error: dmmplayerLink must be dmmgameplayer protocol");
-        }
-        if(dmmgameplayerURL.pathname.includes('general')){
-            return {
-                product_id:dmmgameplayerURL.host,
-                game_type:'GCL',
-                game_os:'win'
-            };
-        } else if(dmmgameplayerURL.pathname.includes('adult')){
-            return {
-                product_id:dmmgameplayerURL.host,
-                game_type:'ACL',
-                game_os:'win'
-            };
-        } else {
-            throw Error("dmmplayerLinkParser error: game_type is not general(GCL) or adult(ACL)");
-        }
-    }
-
-    let getDmmgameplayerLink = function(pageType){
-        if(pageType == 'dmm'){
-            return GM_getValue('dmm_dmmgameplayerLink',null);
-        } else if(pageType == 'fanza'){
-            return GM_getValue('fanza_dmmgameplayerLink',null);
-        } else {
-            throw Error('pageType error');
-        }
-    }
-
-    let saveDmmgameplayerLink = function(pageType,dmmgameplayerLink){
-        if(pageType == 'dmm'){
-            GM_setValue('dmm_dmmgameplayerLink',dmmgameplayerLink);
-            console.log('dmm_dmmgameplayerLink now is '+dmmgameplayerLink);
-        } else if(pageType == 'fanza'){
-            GM_setValue('fanza_dmmgameplayerLink',dmmgameplayerLink);
-            console.log('fanza_dmmgameplayerLink now is '+dmmgameplayerLink);
-        } else {
-            throw Error('pageType error');
-        }
-        return;
-    }
-
-    let clientGame = async function(pageType){
-        let actauth = await getActauth();
-        if(!await checkClientAccessToken(actauth)){
-            actauth = await updateClientAccessToken();
-        }
-        let clientGameData = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
-        clientGameData.launch_type = "LIB";
-        await postLaunchClientGame(clientGameData);
-        return;
-    }
 
     // add dmm game player client game into your gamelist
     
-    let detailButtoninfo = async function(pageType){
+    let detailButtoninfo = async function (product_id, game_type){
+        console.log('/v5/detail/buttoninfo');
         let header = await clientHeader();
         header.Actauth = await getActauth();
-        let data = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
+        // let data = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
+        let data = getHardwareInfo();
+        data.product_id = product_id;
+        data.game_type = game_type;
+        data.game_os = "win";
         let details = {
             method: "POST",
             url: 'https://apidgp-gameplayer.games.dmm.com/v5/detail/buttoninfo',
             headers: header,
             data: JSON.stringify(data)
         }
+        console.log(data);
         let response = await GM.xmlHttpRequest(details);
         let result = JSON.parse(response.responseText);
-        console.log('/v5/detail/buttoninfo');
         console.log(result);
         if(result.result_code !== 100){
             throw Error("detail/buttoninfo error");
@@ -452,19 +368,25 @@
         return result;
     }
     
-    let mygameRestore = async function(pageType){
+    let mygameRestore = async function (product_id, game_type){
+        console.log('/v5/mygame/restore');
         let header = await clientHeader();
         header.Actauth = await getActauth();
-        let data = {my_games:[dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))]};
+        // let data = { my_games: [dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))]};
+        let data = { my_games: [{
+            product_id: product_id,
+            game_type: game_type,
+            game_os: "win"
+        }] };
         let details = {
             method: "POST",
             url: 'https://apidgp-gameplayer.games.dmm.com/v5/mygame/restore',
             headers: header,
             data: JSON.stringify(data)
         }
+        console.log(data);
         let response = await GM.xmlHttpRequest(details);
         let result = JSON.parse(response.responseText);
-        console.log('/v5/mygame/restore');
         console.log(result);
         if(result.result_code !== 100){
             throw Error("mygame/restore error");
@@ -472,19 +394,23 @@
         return result;
     }
 
-    let detailMygameAdd = async function(pageType){
+    let detailMygameAdd = async function (product_id, game_type){
+        console.log('/v5/detail/mygame/add');
         let header = await clientHeader();
         header.Actauth = await getActauth();
-        let data = dmmgameplayerLinkParser(getDmmgameplayerLink(pageType));
+        let data = {};//dmmgameplayerLinkParser(getDmmgameplayerLink(pageType));
+        data.product_id = product_id;
+        data.game_type = game_type;
+        data.game_os = "win";
         let details = {
             method: "POST",
             url: 'https://apidgp-gameplayer.games.dmm.com/v5/detail/mygame/add',
             headers: header,
             data: JSON.stringify(data)
         }
+        console.log(data);
         let response = await GM.xmlHttpRequest(details);
         let result = JSON.parse(response.responseText);
-        console.log('/v5/detail/mygame/add');
         console.log(result);
         if(result.result_code !== 100){
             throw Error("detail/mygame/add error");
@@ -492,19 +418,24 @@
         return result;
     }
 
-    let r2InstallCl = async function(pageType){
+    let r2InstallCl = async function (product_id, game_type){
+        console.log('/v5/r2/install/cl');
         let header = await clientHeader();
         header.Actauth = await getActauth();
-        let data = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
+        // let data = {...getHardwareInfo(), ...dmmgameplayerLinkParser(getDmmgameplayerLink(pageType))};
+        let data = getHardwareInfo();
+        data.product_id = product_id;
+        data.game_type = game_type;
+        data.game_os = "win";
         let details = {
             method: "POST",
             url: 'https://apidgp-gameplayer.games.dmm.com/v5/r2/install/cl',
             headers: header,
             data: JSON.stringify(data)
         }
+        console.log(data);
         let response = await GM.xmlHttpRequest(details);
         let result = JSON.parse(response.responseText);
-        console.log('/v5/r2/install/cl');
         console.log(result);
         if(result.result_code == 308){
             console.log("r2/install/cl result_code 308, agreement required");
@@ -516,19 +447,23 @@
         return result;
     }
 
-    let agreement = async function(pageType){
+    let agreement = async function (product_id){
+        console.log('/v5/agreement');
         let header = await clientHeader();
         header.Actauth = await getActauth();
-        let data = {product_id:dmmgameplayerLinkParser(getDmmgameplayerLink(pageType)).product_id};
+        // let data = {product_id:dmmgameplayerLinkParser(getDmmgameplayerLink(pageType)).product_id};
+        let data = {
+            product_id: product_id
+        };
         let details = {
             method: "POST",
             url: 'https://apidgp-gameplayer.games.dmm.com/v5/agreement',
             headers: header,
             data: JSON.stringify(data)
         }
+        console.log(data);
         let response = await GM.xmlHttpRequest(details);
         let result = JSON.parse(response.responseText);
-        console.log('/v5/agreement');
         console.log(result);
         if(result.result_code !== 100){
             throw Error("agreement error");
@@ -536,11 +471,12 @@
         return result;
     }
 
-    let agreementConfirmClient = async function(pageType){
+    let agreementConfirmClient = async function (product_id){
+        console.log('/v5/agreement/confirm/client');
         let header = await clientHeader();
         header.Actauth = await getActauth();
         let data = {
-            product_id:dmmgameplayerLinkParser(getDmmgameplayerLink(pageType)).product_id,
+            product_id: product_id,//dmmgameplayerLinkParser(getDmmgameplayerLink(pageType)).product_id,
             is_notification:false
         };
         let details = {
@@ -549,9 +485,9 @@
             headers: header,
             data: JSON.stringify(data)
         }
+        console.log(data);
         let response = await GM.xmlHttpRequest(details);
         let result = JSON.parse(response.responseText);
-        console.log('/v5/agreement/confirm/client');
         console.log(result);
         if(result.result_code !== 100){
             throw Error("agreement/confirm/client error");
@@ -559,28 +495,28 @@
         return result;
     }
 
-    let addClientGame = async function(pageType){
+    let addClientGame = async function (product_id, game_type){
         let actauth = await getActauth();
         if(!await checkClientAccessToken(actauth)){
             actauth = await updateClientAccessToken();
         }
-        let detailButtoninfoResult = await detailButtoninfo(pageType);
+        let detailButtoninfoResult = await detailButtoninfo(product_id, game_type);
         if(detailButtoninfoResult.data[0].main_button_info.actions[0] == 'addMyGame' || !detailButtoninfoResult.data[0].is_in_mygame){
-            await mygameRestore(pageType);
-            await detailMygameAdd(pageType);
+            await mygameRestore(product_id, game_type);
+            await detailMygameAdd(product_id, game_type);
             console.log('this game is added into game list now');
         } else {
             console.log('this game have been in game list');
         }
-        let r2InstallClResult = await r2InstallCl(pageType);
+        let r2InstallClResult = await r2InstallCl(product_id, game_type);
         if(r2InstallClResult.result_code == 308){
             // agreement required
-            await agreement(pageType);
-            let agreementConfirmClientResult = await agreementConfirmClient(pageType);
+            await agreement(product_id);
+            let agreementConfirmClientResult = await agreementConfirmClient(product_id);
             if(agreementConfirmClientResult.result_code == 100){
                 console.log('confirm agreement success');
             }            
-            let r2InstallClResult2 = await r2InstallCl(pageType);
+            let r2InstallClResult2 = await r2InstallCl(product_id, game_type);
             if(r2InstallClResult2.result_code == 100){
                 console.log('r2/install/cl success');
             } else {
@@ -597,7 +533,154 @@
     }
 
 
+    // dmm game player client game launch
 
+    let r2LaunchCl = async function (product_id, game_type) {
+        // product_id = product_id string, example: "mementomori"
+        // game_type = "GCL"(not adult) or "ACL"(adult)
+        console.log('/v5/r2/launch/cl');
+        let actauth = await getActauth();
+        if (!await checkClientAccessToken(actauth)) {
+            actauth = await updateClientAccessToken();
+        }
+        let header = await clientHeader();
+        header.Actauth = actauth;
+        // console.log(header);
+        let data = getHardwareInfo();
+        data.product_id = product_id;
+        data.game_type = game_type;
+        data.game_os = "win";
+        data.launch_type = "LIB";
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/r2/launch/cl',
+            headers: header,
+            data: JSON.stringify(data)
+        }
+        console.log(data);
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log(result);
+        return result;
+    }
+
+    let launchClientGame = async function (product_id, game_type) {
+        let launchResult = await r2LaunchCl(product_id, game_type);
+        if (launchResult.result_code == 100) {
+            // launch success
+            console.log(`result_code is 100, launch product_id:${product_id} game_type:${game_type} success`);
+        } else {
+            // launch fail, try addClientGame, then retry launch
+            await addClientGame(product_id, game_type);
+            launchResult = await r2LaunchCl(product_id, game_type);
+            if (launchResult.result_code == 100){
+                // retry launch success
+                console.log(`result_code is 100, launch product_id:${product_id} game_type:${game_type} success`);
+            } else {
+                // retry launch fail
+                console.log(`result_code is ${launchResult.result_code}, launch product_id:${product_id} game_type:${game_type} fail`);
+            }
+        }
+        return launchResult.result_code;
+    }
+
+
+    // dmm game player mission api
+
+    let missionCatalogs = async function (category, is_adult) {
+        // category: "limited" "daily" "weekly" "monthly"
+        // is_adult: true false
+        console.log('/v5/mission/catalogs');
+        let header = await clientHeader();
+        header.Actauth = await getActauth();
+        let data = {
+            category: category,
+            is_adult: is_adult
+        };
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/mission/catalogs',
+            headers: header,
+            data: JSON.stringify(data)
+        }
+        console.log(data);
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log(result);
+        if (result.result_code !== 100) {
+            throw Error("/v5/mission/catalogs error");
+        }
+        return result;
+    }
+    unsafeWindow.missionCatalogs = missionCatalogs;
+
+    let missionAward = async function (mission_id) {
+        // mission_id: string (should be a uuid)
+        console.log('/v5/mission/mission/award');
+        let header = await clientHeader();
+        header.Actauth = await getActauth();
+        let data = {
+            mission_id: mission_id
+        };
+        let details = {
+            method: "POST",
+            url: 'https://apidgp-gameplayer.games.dmm.com/v5/mission/mission/award',
+            headers: header,
+            data: JSON.stringify(data)
+        }
+        console.log(data);
+        let response = await GM.xmlHttpRequest(details);
+        let result = JSON.parse(response.responseText);
+        console.log(result);
+        if (result.result_code !== 100) {
+            throw Error("/v5/mission/mission/award error");
+        }
+        return result;
+    }
+
+
+    // one click harvest dmm game player daily mission
+
+    let dmmgameplayerDailyMission = async function (is_adult) {
+        // is_adult: true false
+        let retryCount = 3;
+        let dailyMissionDetail = (await missionCatalogs("daily", is_adult)).data.daily[0];
+        let lastMissionStatus = '';
+        let product_id = '';
+        let game_type = is_adult ? "ACL" : "GCL";
+        while (retryCount > 0){
+            if (dailyMissionDetail.status == "progressing") {
+                // send launch signal
+                for (let i = 0; i < dailyMissionDetail.applications.length; i++){
+                    product_id = dailyMissionDetail.applications[i].link.url.match(/\/free\/(.*)$/)[1];
+                    await launchClientGame(product_id, game_type);
+                }
+                // await sleep(1000);
+            } else if (dailyMissionDetail.status == "achieved") {
+                // send award signal
+                await missionAward(dailyMissionDetail.id);
+            } else if (dailyMissionDetail.status == "completed") {
+                return "completed";
+            } else {
+                console.log(dailyMissionDetail);
+                throw Error("dailyMissionDetail.status error");
+            }
+            lastMissionStatus = dailyMissionDetail.status;
+            dailyMissionDetail = (await missionCatalogs("daily", is_adult)).data.daily[0];
+            if (dailyMissionDetail.status == lastMissionStatus){
+                retryCount--;
+                console.log("retryCount: " + retryCount);
+            }
+        }
+        return dailyMissionDetail.status;
+    }
+
+    let dmmgameplayerOneClickHarvest = async function () {
+        let commonMissionStatus = await dmmgameplayerDailyMission(false);
+        let adultMissionStatus = await dmmgameplayerDailyMission(true);
+        console.log(`commonMissionStatus: ${commonMissionStatus}, adultMissionStatus: ${adultMissionStatus}`);
+        return;
+    }
 
 
     // check mission status
@@ -683,7 +766,7 @@
     let createClientGameMissionBtn = function(beforeNode,id){
         let attribute = {
             id:id, //"ClientGameMissionBtn"
-            innerHTML:"&nbsp;Send Launch Signal&nbsp;",
+            innerHTML:"&nbsp;One Click Harvest (DMM Game Player)&nbsp;",
             background:"#66CDAA",
             color:"#000",
             fontSize:"16px",
@@ -719,24 +802,24 @@
 
     // PC lottery mission
 
-    let lotteryJoin = function(link){
-        let details = {
-            method: "GET",
-            url: link
-        }
-        let response = GM.xmlHttpRequest(details);
-        console.log(response);
-        return;
-    }
+    // let lotteryJoin = function(link){
+    //     let details = {
+    //         method: "GET",
+    //         url: link
+    //     }
+    //     let response = GM.xmlHttpRequest(details);
+    //     console.log(response);
+    //     return;
+    // }
 
-    let lotteryStatus = function(node){
-        // is_not-started -> is_in-progress -> is_completed
-        if(node.className.includes('is_completed')){
-            return 0;
-        } else {
-            return 1;
-        }
-    }
+    // let lotteryStatus = function(node){
+    //     // is_not-started -> is_in-progress -> is_completed
+    //     if(node.className.includes('is_completed')){
+    //         return 0;
+    //     } else {
+    //         return 1;
+    //     }
+    // }
 
 
     // xmlHttpRequest get MissionPage
@@ -881,7 +964,7 @@
         pcOneClickReceiveBtn.onclick = function(){
             pcOneClickReceive();
         }
-        // insertNodeBefore(missionContentPlace,"br",{});
+        insertNodeBefore(missionContentPlace,"br",{});
         // insertNodeBefore(missionContentPlace,"span",{
         //     fontSize:"16px",
         //     innerHTML:"&nbsp;Input dmmgameplayer link:&nbsp;"
@@ -897,10 +980,12 @@
         // saveLinkBtn.onclick = function(){
         //     saveDmmgameplayerLink(currentPageType,inputLink.value);
         // }
-        // let clientGameMissionBtn = createClientGameMissionBtn(missionContentPlace,"ClientGameMissionBtn");
-        // clientGameMissionBtn.onclick = async function(){
-        //     await clientGame(currentPageType);
-        // }
+        let clientGameMissionBtn = createClientGameMissionBtn(missionContentPlace,"ClientGameMissionBtn");
+        clientGameMissionBtn.onclick = async function(){
+            await dmmgameplayerOneClickHarvest();
+            clientGameMissionBtn.innerHTML = '&nbsp;One Click Harvest (DMM Game Player) Finished!&nbsp;';
+            clientGameMissionBtn.style.background = "#EE82EE";
+        }
         // let addGameBtn = createAddGameBtn(missionContentPlace,"AddGameBtn");
         // addGameBtn.onclick = async function(){
         //     await addClientGame(currentPageType);
