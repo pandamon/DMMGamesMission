@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.4.1
+// @version      beta-0.4.2
 // @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -337,6 +337,14 @@
         return actauth;
     }
 
+    let checkAndUpdateActauth = async function () {
+        let actauth = await getActauth();
+        if(!await checkClientAccessToken(actauth)){
+            actauth = await updateClientAccessToken();
+        }
+        return;
+    }
+
 
 
 
@@ -496,10 +504,10 @@
     }
 
     let addClientGame = async function (product_id, game_type){
-        let actauth = await getActauth();
-        if(!await checkClientAccessToken(actauth)){
-            actauth = await updateClientAccessToken();
-        }
+        // let actauth = await getActauth();
+        // if(!await checkClientAccessToken(actauth)){
+        //     actauth = await updateClientAccessToken();
+        // }
         let detailButtoninfoResult = await detailButtoninfo(product_id, game_type);
         if(detailButtoninfoResult.data[0].main_button_info.actions[0] == 'addMyGame' || !detailButtoninfoResult.data[0].is_in_mygame){
             await mygameRestore(product_id, game_type);
@@ -540,9 +548,9 @@
         // game_type = "GCL"(not adult) or "ACL"(adult)
         console.log('/v5/r2/launch/cl');
         let actauth = await getActauth();
-        if (!await checkClientAccessToken(actauth)) {
-            actauth = await updateClientAccessToken();
-        }
+        // if (!await checkClientAccessToken(actauth)) {
+        //     actauth = await updateClientAccessToken();
+        // }
         let header = await clientHeader();
         header.Actauth = actauth;
         // console.log(header);
@@ -643,6 +651,7 @@
 
     let dmmgameplayerDailyMission = async function (is_adult) {
         // is_adult: true false
+        await checkAndUpdateActauth();
         let retryCount = 3;
         let dailyMissionDetail = (await missionCatalogs("daily", is_adult)).data.daily[0];
         let lastMissionStatus = '';
@@ -683,143 +692,8 @@
     }
 
 
-    // check mission status
-
-    let missionStatus = function(node){
-        if (node.querySelector("a[data-gtm-action-detail=link_mission-card]")){
-            return 'harvest';
-        } else if (node.querySelector("button[data-gtm-action-detail=receive_card]")){
-            return 'reward';
-        } else if (node.querySelector("div[class^=missionCard_completedOverlay]")){
-            return 'completed';
-        } else {
-            throw Error("missionStatus error");
-        }
-    }
 
 
-    // insert button and input node
-
-    let insertNodeBefore = function(beforeNode,createNodeType,createNodeAttribute){
-        // return node
-        // createNodeType:"div","button"...
-        // insertNodeAttribute example:
-        // insertNodeAttribute = {
-        //     id:xxx,
-        //     innerHTML:xxx,
-        //     innerText:xxx,
-        //     background:xxx,
-        //     color:xxx,
-        //     fontSize:xxx
-        // }
-        let createNode = document.createElement(createNodeType);
-        if(createNodeAttribute.id){
-            createNode.setAttribute('id',createNodeAttribute.id);
-        }
-        if(createNodeAttribute.innerHTML){
-            createNode.innerHTML = createNodeAttribute.innerHTML;
-        }
-        if(createNodeAttribute.innerText){
-            createNode.innerText = createNodeAttribute.innerText;
-        }
-        if(createNodeAttribute.background){
-            createNode.style.background = createNodeAttribute.background;
-        }
-        if(createNodeAttribute.color){
-            createNode.style.color = createNodeAttribute.color;
-        }
-        if(createNodeAttribute.fontSize){
-            createNode.style.fontSize = createNodeAttribute.fontSize;
-        }
-        if(createNodeAttribute.textAlign){
-            createNode.style.textAlign = createNodeAttribute.textAlign;
-        }
-        if(createNodeAttribute.border){
-            createNode.style.border = createNodeAttribute.border;
-        }
-        beforeNode.parentElement.insertBefore(createNode,beforeNode);
-        return createNode;
-    }
-
-    let createInputLink = function(beforeNode,id){
-        let inputLinkAttribute = {
-            id:id, //"dmmgameplayerLink"
-            background:"#FFFFFF",
-            fontSize:"16px",
-            border:"2px solid black"
-        };
-        return insertNodeBefore(beforeNode,"input",inputLinkAttribute);
-    }
-
-    let createSaveLinkBtn = function(beforeNode,id){
-        let saveLinkBtnAttribute = {
-            id:id, //"SaveLinkBtn"
-            innerHTML:"&nbsp;Save Link&nbsp;",
-            background:"#F4A460",
-            color:"#000",
-            fontSize:"16px",
-            border:"2px solid black"
-        };
-        return insertNodeBefore(beforeNode,"button",saveLinkBtnAttribute);
-    }
-
-    let createClientGameMissionBtn = function(beforeNode,id){
-        let attribute = {
-            id:id, //"ClientGameMissionBtn"
-            innerHTML:"&nbsp;One Click Harvest (DMM Game Player)&nbsp;",
-            background:"#66CDAA",
-            color:"#000",
-            fontSize:"16px",
-            border:"2px solid black"
-        };
-        return insertNodeBefore(beforeNode,"button",attribute);
-    }
-
-    let createAddGameBtn = function(beforeNode,id){
-        let attribute = {
-            id:id, //"AddGameBtn"
-            innerHTML:"&nbsp;Add Game&nbsp;",
-            background:"#EE82EE",
-            color:"#000",
-            fontSize:"16px",
-            border:"2px solid black"
-        };
-        return insertNodeBefore(beforeNode,"button",attribute);
-    }
-
-    let createOneClickReceiveBtn = function(beforeNode,id){
-        let attribute = {
-            id:id,
-            innerHTML:"&nbsp;One Click Harvest&nbsp;",
-            background:"#FFD700",
-            color:"#000",
-            fontSize:"16px",
-            border:"2px solid black"
-        };
-        return insertNodeBefore(beforeNode,"button",attribute);
-    }
-
-
-    // PC lottery mission
-
-    // let lotteryJoin = function(link){
-    //     let details = {
-    //         method: "GET",
-    //         url: link
-    //     }
-    //     let response = GM.xmlHttpRequest(details);
-    //     console.log(response);
-    //     return;
-    // }
-
-    // let lotteryStatus = function(node){
-    //     // is_not-started -> is_in-progress -> is_completed
-    //     if(node.className.includes('is_completed')){
-    //         return 0;
-    //     } else {
-    //         return 1;
-    //     }
-    // }
 
 
     // xmlHttpRequest get MissionPage
@@ -842,6 +716,157 @@
         return response;
     }
 
+    // web game mission process
+
+    let queryMissionTarget = function(pageDocument){
+        let button = pageDocument.querySelector("div[class^=actionButton] > a[data-gtm-action-detail=link_mission]");
+        if (button){
+            let bottonList = pageDocument.querySelectorAll("div[class^=actionButton] > a[data-gtm-action-detail=link_mission]");
+            return { node: bottonList, type: 'button' };
+        }
+        let list = pageDocument.querySelectorAll("a[class^=targetGame]");
+        if (list.length > 0){
+            return { node: list, type: 'list' };
+        }
+        return { node: null, type: null };
+    }
+
+    let openMissionTargetTab = function (missionTarget){
+        if (missionTarget.type) {
+            for (let i = 0; i < missionTarget.node.length; i++) {
+                if (missionTarget.node[i].href.includes('rcv.ixd.dmm.com')) {
+                    let tab = GM_openInTab(missionTarget.node[i].href);
+                    setTimeout(function () {
+                        tab.close();
+                    }, 10000);
+                }
+            }
+        }
+        return;
+    }
+
+    let webGameMission = async function (missionLink){
+        // console.log(missionLink);
+        let missionPage = await getMissionPage(missionLink);
+        let missionTarget = queryMissionTarget(missionPage.responseXML);
+        if (missionTarget.type){
+            openMissionTargetTab(missionTarget);
+        }
+        return;
+    }
+
+
+
+    // check web game mission status
+
+    let missionStatus = function (node) {
+        if (node.querySelector("a[data-gtm-action-detail=link_mission-card]")) {
+            return 'harvest';
+        } else if (node.querySelector("button[data-gtm-action-detail=receive_card]")) {
+            return 'reward';
+        } else if (node.querySelector("div[class^=missionCard_completedOverlay]")) {
+            return 'completed';
+        } else {
+            throw Error("missionStatus error");
+        }
+    }
+
+    let receiveStatus = function (node) {
+        if (document.querySelector("div[class^=catalogsRewardButton] > button")) {
+            if (missionStatus(node) == 'reward') {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    let webGameOneClickHarvest = async function (webMissionCatalog) {
+        for (let i = 0; i < webMissionCatalog.length; i++){
+            let missionLinkList = webMissionCatalog[i].querySelectorAll("li > a[data-gtm-action-detail=link_mission-card]");
+            if (missionLinkList.length > 0){
+                for (let j = 0; j < missionLinkList.length; j++){
+                    webGameMission(missionLinkList[j].href);
+                }
+            }
+        }
+        await sleep(12000);
+        location.reload();
+        return;
+    }
+
+
+
+    // button ui
+
+    let insertNodeBefore = function (beforeNode, createNodeType, createNodeAttribute) {
+        // return node
+        // createNodeType:"div","button"...
+        // insertNodeAttribute example:
+        // insertNodeAttribute = {
+        //     id:xxx,
+        //     innerHTML:xxx,
+        //     innerText:xxx,
+        //     background:xxx,
+        //     color:xxx,
+        //     fontSize:xxx
+        // }
+        let createNode = document.createElement(createNodeType);
+        if (createNodeAttribute.id) {
+            createNode.setAttribute('id', createNodeAttribute.id);
+        }
+        if (createNodeAttribute.innerHTML) {
+            createNode.innerHTML = createNodeAttribute.innerHTML;
+        }
+        if (createNodeAttribute.innerText) {
+            createNode.innerText = createNodeAttribute.innerText;
+        }
+        if (createNodeAttribute.background) {
+            createNode.style.background = createNodeAttribute.background;
+        }
+        if (createNodeAttribute.color) {
+            createNode.style.color = createNodeAttribute.color;
+        }
+        if (createNodeAttribute.fontSize) {
+            createNode.style.fontSize = createNodeAttribute.fontSize;
+        }
+        if (createNodeAttribute.textAlign) {
+            createNode.style.textAlign = createNodeAttribute.textAlign;
+        }
+        if (createNodeAttribute.border) {
+            createNode.style.border = createNodeAttribute.border;
+        }
+        beforeNode.parentElement.insertBefore(createNode, beforeNode);
+        return createNode;
+    }
+
+    let createClientGameMissionBtn = function (beforeNode, id) {
+        let attribute = {
+            id: id, //"ClientGameMissionBtn"
+            innerHTML: "&nbsp;One Click Harvest (DMM Game Player)&nbsp;",
+            background: "#66CDAA",
+            color: "#000",
+            fontSize: "16px",
+            border: "2px solid black"
+        };
+        return insertNodeBefore(beforeNode, "button", attribute);
+    }
+
+    let createOneClickReceiveBtn = function (beforeNode, id) {
+        let attribute = {
+            id: id,
+            innerHTML: "&nbsp;One Click Harvest&nbsp;",
+            background: "#FFD700",
+            color: "#000",
+            fontSize: "16px",
+            border: "2px solid black"
+        };
+        return insertNodeBefore(beforeNode, "button", attribute);
+    }
+
+
 
     // main function
 
@@ -851,110 +876,9 @@
 
         await sleep(1000);
 
-        let pcWebGame = async function(){
-            let missionLink = allMissionList[1].querySelector("a[data-gtm-action-detail=link_mission-card][data-gtm-action-value=対象タイトルから3つプレイしよう]").href;
-            let missionPage = await getMissionPage(missionLink);
-            let targetGameList = missionPage.responseXML.querySelectorAll("a[class^=targetGame]");
-            for (let i = 0; i < targetGameList.length; i++) {
-                let link = targetGameList[i].href;
-                let tab = GM_openInTab(link);
-                setTimeout(function () {
-                    tab.close();
-                }, 10000);
-            }
-            return;
-        }
-
-        // let pcLibrary = function(){
-        //     let link = dailyMissionList[3].querySelector("a.c-btnLink").href;
-        //     let tab = GM_openInTab(link);
-        //     setTimeout(function(){
-        //         tab.close();
-        //     },10000);
-        //     return;
-        // }
-
-        let lotteryGame = async function(){
-            let missionLink = allMissionList[1].querySelector("a[data-gtm-action-detail=link_mission-card][data-gtm-action-value=対象ゲームを累計3日間プレイしよう]").href;
-            let missionPage = await getMissionPage(missionLink);
-            let targetGameLink = missionPage.responseXML.querySelector("div[class^=actionButton] > a[data-gtm-action-detail=link_mission]");
-            let tab = GM_openInTab(targetGameLink);
-            setTimeout(function () {
-                tab.close();
-            }, 10000);
-            return;
-        }
-
-        // let limitedTimeMission = function(){
-        //     let limitedTimeMissionGameList = limitedTimeMissionNode.querySelectorAll('li.targetGameItem > a');
-        //     for(let i=0;i<limitedTimeMissionGameList.length;i++){
-        //         let link = limitedTimeMissionGameList[i].href;
-        //         let tab = GM_openInTab(link);
-        //         setTimeout(function(){
-        //             tab.close();
-        //         },10000);
-        //     }
-        //     return;
-        // }
-
-        let receiveStatus = function(){
-            if (document.querySelector("div[class^=catalogsRewardButton] > button")){
-                if (missionStatus(allMissionList[1]) == 'reward'){
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-            // for(let i=0;i<dailyMissionList.length;i++){
-            //     let m = missionStatus(dailyMissionList[i]);
-            //     if(m < 0){
-            //         return false;
-            //     } else {
-            //         status = status || m;
-            //     }
-            // }
-        }
-
-        let pcOneClickReceive = async function(){
-            if (missionStatus(allMissionList[1]) == 'harvest'){
-                pcWebGame();
-            }
-            if (missionStatus(allMissionList[2]) == 'harvest') {
-                lotteryGame();
-            }
-            // if(missionStatus(dailyMissionList[1])<0){
-            //     clientGame(currentPageType);
-            // }
-            // if(missionStatus(dailyMissionList[2])<0){
-            //     pcPachinko();
-            // }
-            // if(missionStatus(dailyMissionList[3])<0){
-            //     pcLibrary();
-            // }
-            // lotteryGame();
-            // if(limitedTimeMissionNode){
-            //     if(missionStatus(limitedTimeMissionNode)<0){
-            //         limitedTimeMission();
-            //     }
-            // }
-            await sleep(12000);
-            location.reload();
-            return;
-        }
-
-        // let dailyMission = selectDailyMissionSection();
-        // let dailyMissionList = dailyMission.querySelectorAll("li.listMission_item.c-missionFrame08");
-        // // dailyMissionList index: 0.webGame 1.clientGame 2.pachinko 3.library
-        // let lotterylist = document.querySelectorAll("section.standardTab_section.is-lottery > div > section.p-sectMission > ul.c-listMission > li.listMission_item.c-missionFrame05");
-        // // lotterylist index: 0.monthly 1.weekly
-        // let limitedTimeMissionNode = document.querySelector("li.listMission_item.c-missionFrame09");
-
-
         let allMission = document.querySelector("div[class^=allPanel]");
-        let allMissionList = allMission.querySelectorAll("div > ul[role=list][class^=catalogPanel]");
-        // allMissionList index: 0.limited 1.daily 2.weeklyLottery 3.monthlyLottery
+        let allMissionCatalog = allMission.querySelectorAll("div > ul[role=list][class^=catalogPanel]");
+        // allMissionCatalog index: 0.limited 1.daily 2.weeklyLottery 3.monthlyLottery
 
 
         let currentPageType = pageType();
@@ -962,36 +886,17 @@
         insertNodeBefore(missionContentPlace, "br", {});
         let pcOneClickReceiveBtn = createOneClickReceiveBtn(missionContentPlace,"PCOneClickReceiveBtn");
         pcOneClickReceiveBtn.onclick = function(){
-            pcOneClickReceive();
+            webGameOneClickHarvest(allMissionCatalog);
         }
         insertNodeBefore(missionContentPlace,"br",{});
-        // insertNodeBefore(missionContentPlace,"span",{
-        //     fontSize:"16px",
-        //     innerHTML:"&nbsp;Input dmmgameplayer link:&nbsp;"
-        // });
-        // insertNodeBefore(missionContentPlace,"br",{});
-        // let inputLink = createInputLink(missionContentPlace,"dmmgameplayerLink");
-        // inputLink.style.width = "600px";
-        // if(getDmmgameplayerLink(currentPageType)){
-        //     inputLink.value = getDmmgameplayerLink(currentPageType);
-        // }
-        // insertNodeBefore(missionContentPlace,"br",{});
-        // let saveLinkBtn = createSaveLinkBtn(missionContentPlace,"SaveLinkBtn");
-        // saveLinkBtn.onclick = function(){
-        //     saveDmmgameplayerLink(currentPageType,inputLink.value);
-        // }
         let clientGameMissionBtn = createClientGameMissionBtn(missionContentPlace,"ClientGameMissionBtn");
         clientGameMissionBtn.onclick = async function(){
             await dmmgameplayerOneClickHarvest();
             clientGameMissionBtn.innerHTML = '&nbsp;One Click Harvest (DMM Game Player) Finished!&nbsp;';
             clientGameMissionBtn.style.background = "#EE82EE";
         }
-        // let addGameBtn = createAddGameBtn(missionContentPlace,"AddGameBtn");
-        // addGameBtn.onclick = async function(){
-        //     await addClientGame(currentPageType);
-        // }
 
-        if(receiveStatus()){
+        if (receiveStatus(allMissionCatalog[1])){
             let receiveAllBtn = document.querySelector("div[class^=catalogsRewardButton] > button");
             receiveAllBtn.click();
         }
@@ -1002,111 +907,20 @@
 
         console.log("mobile");
 
-        // let mobileDailyMission = document.querySelector("div.daily-mission.mission-box");
-        // let mobileDailyMissionList = mobileDailyMission.querySelectorAll("li.mission-item.mission-block");
-        // unsafeWindow.mobileDailyMissionList = mobileDailyMissionList;
-        // // index: 0.webGame 1.pachinko 2.library
-
-        let isNotDownloadAppLink = function(link){
-            return !link.match(/\/app\/-\/appstore\/download/g);
-        }
-
-        let mobileWebGame = async function () {
-            let missionLink = allMissionList[1].querySelector("a[data-gtm-action-detail=link_mission-card][data-gtm-action-value=対象タイトルから2つプレイしよう]").href;
-            let missionPage = await getMissionPage(missionLink);
-            let targetGameList = missionPage.responseXML.querySelectorAll("a[class^=targetGame]");
-            for (let i = 0; i < targetGameList.length; i++) {
-                let link = targetGameList[i].href;
-                let tab = GM_openInTab(link);
-                setTimeout(function () {
-                    tab.close();
-                }, 10000);
-            }
-            return;
-        }
-
-        // let mobileWebGame = function(){
-        //     let mobileWebGameList = mobileDailyMissionList[0].querySelectorAll("li.target-item > a");
-        //     for(let i=0;i<mobileWebGameList.length;i++){
-        //         let link = mobileWebGameList[i].href;
-        //         if(isNotDownloadAppLink(link)){
-        //             let tab = GM_openInTab(link);
-        //             setTimeout(function(){
-        //                 tab.close();
-        //             },10000);
-        //         }
-        //     }
-        //     return;
-        // }
-
-        // let mobileLibrary = function(){
-        //     let link = mobileDailyMissionList[2].querySelector("a.c-btnLink").href;
-        //     let tab = GM_openInTab(link);
-        //     setTimeout(function(){
-        //         tab.close();
-        //     },10000);
-        //     return;
-        // }
-
-        let mobileOneClickReceive = async function(){
-            if (missionStatus(allMissionList[1]) == 'harvest'){
-                mobileWebGame();
-            }
-            // if(missionStatus(mobileDailyMissionList[2])<0){
-            //     mobileLibrary();
-            // }
-            await sleep(12000);
-            location.reload();
-            return;
-        }
-
-        // let mobileReceiveStatus = function(){
-        //     let status = 0;
-        //     for(let i=0;i<mobileDailyMissionList.length;i++){
-        //         let m = missionStatus(mobileDailyMissionList[i]);
-        //         if(m < 0){
-        //             return false;
-        //         } else {
-        //             status = status || m;
-        //         }
-        //     }
-        //     return Boolean(status);
-        // }
-
-        let receiveStatus = function () {
-            if (document.querySelector("div[class^=catalogsRewardButton] > button")) {
-                if (missionStatus(allMissionList[1]) == 'reward') {
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-            // for(let i=0;i<dailyMissionList.length;i++){
-            //     let m = missionStatus(dailyMissionList[i]);
-            //     if(m < 0){
-            //         return false;
-            //     } else {
-            //         status = status || m;
-            //     }
-            // }
-        }
-
         await sleep(1000);
 
         let allMission = document.querySelector("div[class^=allPanel]");
-        let allMissionList = allMission.querySelectorAll("div > ul[role=list][class^=catalogPanel]");
-        // allMissionList index: 0.limited 1.daily 2.weekly 3.monthly
+        let allMissionCatalog = allMission.querySelectorAll("div > ul[role=list][class^=catalogPanel]");
+        // allMissionCatalog index: 0.limited 1.daily 2.weekly 3.monthly
 
         let missionContentPlace = document.querySelector("body > div[data-title=main_contents] > div.gamesResetStyle > main[class^=styles_main] > div[class^=styles_content] > div[class^=sp_sp]");
         insertNodeBefore(missionContentPlace, "br", {});
         let mobileOneClickReceiveBtn = createOneClickReceiveBtn(missionContentPlace,"MobileOneClickReceiveBtn");
         mobileOneClickReceiveBtn.onclick = function(){
-            mobileOneClickReceive();
+            webGameOneClickHarvest(allMissionCatalog);
         }
 
-        if (receiveStatus()){
+        if (receiveStatus(allMissionCatalog[1])){
             let receiveAllBtn = document.querySelector("div[class^=catalogsRewardButton] > button");
             receiveAllBtn.click();
         }
