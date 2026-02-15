@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Mission
 // @namespace    https://www.youtube.com/watch?v=dQw4w9WgXcQ
-// @version      beta-0.4.2
+// @version      beta-0.4.3
 // @description  DMM Games Mission one click harvest
 // @author       Pandamon
 // @match        https://mission.games.dmm.com
@@ -692,6 +692,67 @@
     }
 
 
+    // dmmplayer send launch signal manually
+
+    let getDmmgameplayerLink = function (pageType) {
+        if (pageType == 'dmm') {
+            return GM_getValue('dmm_dmmgameplayerLink', null);
+        } else if (pageType == 'fanza') {
+            return GM_getValue('fanza_dmmgameplayerLink', null);
+        } else {
+            throw Error('pageType error');
+        }
+    }
+
+    let saveDmmgameplayerLink = function (pageType, dmmgameplayerLink) {
+        if (pageType == 'dmm') {
+            GM_setValue('dmm_dmmgameplayerLink', dmmgameplayerLink);
+            console.log('dmm_dmmgameplayerLink now is ' + dmmgameplayerLink);
+        } else if (pageType == 'fanza') {
+            GM_setValue('fanza_dmmgameplayerLink', dmmgameplayerLink);
+            console.log('fanza_dmmgameplayerLink now is ' + dmmgameplayerLink);
+        } else {
+            throw Error('pageType error');
+        }
+        return;
+    }
+
+    let dmmgameplayerLinkParser = function (dmmgameplayerLink) {
+        if (!dmmgameplayerLink.startsWith('dmmgameplayer://')) {
+            throw Error("dmmplayerLinkParser error: dmmplayerLink must be start with dmmgameplayer://");
+        }
+        let dmmgameplayerURL = new URL(dmmgameplayerLink);
+        if (!(dmmgameplayerURL.protocol == 'dmmgameplayer:')) {
+            throw Error("dmmplayerLinkParser error: dmmplayerLink must be dmmgameplayer protocol");
+        }
+        if (dmmgameplayerURL.pathname.includes('general')) {
+            return {
+                product_id: dmmgameplayerURL.host,
+                game_type: 'GCL'
+            };
+        } else if (dmmgameplayerURL.pathname.includes('adult')) {
+            return {
+                product_id: dmmgameplayerURL.host,
+                game_type: 'ACL'
+            };
+        } else {
+            throw Error("dmmplayerLinkParser error: game_type is not general(GCL) or adult(ACL)");
+        }
+    }
+
+    let sendLaunchSignal = async function (pageType) {
+        await checkAndUpdateActauth();
+        let clientGameData = dmmgameplayerLinkParser(getDmmgameplayerLink(pageType));
+        await r2LaunchCl(clientGameData.product_id, clientGameData.game_type);
+        return;
+    }
+
+    let addClientGameManually = async function (pageType) {
+        await checkAndUpdateActauth();
+        let clientGameData = dmmgameplayerLinkParser(getDmmgameplayerLink(pageType));
+        await addClientGame(clientGameData.product_id, clientGameData.game_type);
+        return;
+    }
 
 
 
@@ -866,6 +927,52 @@
         return insertNodeBefore(beforeNode, "button", attribute);
     }
 
+    let createInputLink = function (beforeNode, id) {
+        let inputLinkAttribute = {
+            id: id, //"dmmgameplayerLink"
+            background: "#FFFFFF",
+            fontSize: "16px",
+            border: "2px solid black"
+        };
+        return insertNodeBefore(beforeNode, "input", inputLinkAttribute);
+    }
+
+    let createSaveLinkBtn = function (beforeNode, id) {
+        let saveLinkBtnAttribute = {
+            id: id, //"SaveLinkBtn"
+            innerHTML: "&nbsp;Save Link&nbsp;",
+            background: "#F4A460",
+            color: "#000",
+            fontSize: "16px",
+            border: "2px solid black"
+        };
+        return insertNodeBefore(beforeNode, "button", saveLinkBtnAttribute);
+    }
+
+    let createSendLaunchSignalBtn = function (beforeNode, id) {
+        let attribute = {
+            id: id, //"SendLaunchSignalBtn"
+            innerHTML: "&nbsp;Send Launch Signal&nbsp;",
+            background: "#66CDAA",
+            color: "#000",
+            fontSize: "16px",
+            border: "2px solid black"
+        };
+        return insertNodeBefore(beforeNode, "button", attribute);
+    }
+
+    let createAddGameBtn = function (beforeNode, id) {
+        let attribute = {
+            id: id, //"AddGameBtn"
+            innerHTML: "&nbsp;Add Game&nbsp;",
+            background: "#EE82EE",
+            color: "#000",
+            fontSize: "16px",
+            border: "2px solid black"
+        };
+        return insertNodeBefore(beforeNode, "button", attribute);
+    }
+
 
 
     // main function
@@ -894,6 +1001,30 @@
             await dmmgameplayerOneClickHarvest();
             clientGameMissionBtn.innerHTML = '&nbsp;One Click Harvest (DMM Game Player) Finished!&nbsp;';
             clientGameMissionBtn.style.background = "#EE82EE";
+        }
+        insertNodeBefore(missionContentPlace, "br", {});
+        insertNodeBefore(missionContentPlace, "span", {
+            fontSize: "16px",
+            innerHTML: "&nbsp;Input dmmgameplayer link:&nbsp;"
+        });
+        insertNodeBefore(missionContentPlace, "br", {});
+        let inputLink = createInputLink(missionContentPlace, "dmmgameplayerLink");
+        inputLink.style.width = "600px";
+        if (getDmmgameplayerLink(currentPageType)) {
+            inputLink.value = getDmmgameplayerLink(currentPageType);
+        }
+        insertNodeBefore(missionContentPlace, "br", {});
+        let saveLinkBtn = createSaveLinkBtn(missionContentPlace, "SaveLinkBtn");
+        saveLinkBtn.onclick = function () {
+            saveDmmgameplayerLink(currentPageType, inputLink.value);
+        }
+        let sendLaunchSignalBtn = createSendLaunchSignalBtn(missionContentPlace, "SendLaunchSignalBtn");
+        sendLaunchSignalBtn.onclick = async function () {
+            await sendLaunchSignal(currentPageType);
+        }
+        let addGameBtn = createAddGameBtn(missionContentPlace, "AddGameBtn");
+        addGameBtn.onclick = async function () {
+            await addClientGameManually(currentPageType);
         }
 
         if (receiveStatus(allMissionCatalog[1])){
