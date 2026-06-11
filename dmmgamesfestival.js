@@ -97,7 +97,7 @@
         }
 
         let openMissionGame = function(){
-            let missionGameList = document.querySelectorAll("a[class*=pc_gamePlayButton][data-is-cleared=false][data-gtm-action-detail*=play_pickup-games]");
+            let missionGameList = document.querySelectorAll("a[class*=gamePlayButton][data-is-cleared=false][data-gtm-action-detail*=play_pickup-games]");
             if(missionGameList.length>0){
                 for(let i=0;i<missionGameList.length;i++){
                     let link = missionGameList[i].href;
